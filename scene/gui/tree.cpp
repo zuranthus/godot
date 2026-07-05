@@ -4743,6 +4743,17 @@ Rect2 Tree::_get_item_focus_rect(const TreeItem *p_item) const {
 	return rect;
 }
 
+int Tree::_get_item_nesting_depth(const TreeItem *p_item) const {
+	int depth = 0;
+	for (TreeItem *parent = p_item->get_parent(); parent; parent = parent->get_parent()) {
+		++depth;
+	}
+	if (hide_root) {
+		--depth;
+	}
+	return depth;
+}
+
 bool Tree::is_editing() {
 	return popup_editor->is_visible();
 }
@@ -6350,22 +6361,29 @@ void Tree::ensure_cursor_is_visible() {
 
 	double delta_h = 0;
 	if (select_mode != SELECT_ROW) { // Cursor always at column 0 in this mode.
+		const int screen_w = area_size.width;
+		const int col_w = get_column_width(selected_col);
+
+		int item_w = col_w;
 		int x_offset = 0;
 		for (int i = 0; i < selected_col; i++) {
 			x_offset += get_column_width(i);
 		}
+		if (selected_col == 0) { // The first column is indented based on the item hierarchy.
+			const int indent_w = theme_cache.item_margin;
+			const int nesting_offset = indent_w * _get_item_nesting_depth(selected_item);
+			x_offset += nesting_offset;
+			item_w = CLAMP(indent_w + (int)selected_item->get_minimum_size(0).x, 0, col_w - nesting_offset);
+		}
 
-		const int cell_w = get_column_width(selected_col);
-		const int screen_w = area_size.width;
-
-		if (cell_w > screen_w) {
+		if (item_w > screen_w) {
 			delta_h = x_offset - h_scroll->get_value();
 			scroll_pending++;
 			h_scroll->set_value(x_offset);
-		} else if (x_offset + cell_w > h_scroll->get_value() + screen_w) {
-			delta_h = x_offset - screen_w + cell_w - h_scroll->get_value();
+		} else if (x_offset + item_w > h_scroll->get_value() + screen_w) {
+			delta_h = x_offset - screen_w + item_w - h_scroll->get_value();
 			scroll_pending++;
-			callable_mp((Range *)h_scroll, &Range::set_value).call_deferred(x_offset - screen_w + cell_w);
+			callable_mp((Range *)h_scroll, &Range::set_value).call_deferred(x_offset - screen_w + item_w);
 		} else if (x_offset < h_scroll->get_value()) {
 			delta_h = x_offset - h_scroll->get_value();
 			h_scroll->set_value(x_offset);

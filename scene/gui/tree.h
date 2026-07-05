@@ -822,6 +822,7 @@ private:
 	Rect2 _get_scrollbar_layout_rect() const;
 	Rect2 _get_content_rect() const; // Considering the background stylebox and scrollbars.
 	Rect2 _get_item_focus_rect(const TreeItem *p_item) const;
+	int _get_item_nesting_depth(const TreeItem *p_item) const;
 
 	void _check_item_accessibility(TreeItem *p_item, PackedStringArray &r_warnings, int &r_row) const;
 
